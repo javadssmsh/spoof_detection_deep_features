@@ -8,7 +8,7 @@ import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
  
 # The GPU id to use, usually either "0" or "1";
-os.environ["CUDA_VISIBLE_DEVICES"]="0";  
+os.environ["CUDA_VISIBLE_DEVICES"]="1";  
 
 
 # In[3]:
@@ -67,6 +67,7 @@ import pywt
 from sklearn.decomposition import PCA
 import sys
 import tensorflow.contrib.slim as slim
+import pickle
 # import tfwavelets
 # sys.path.insert(1, '/content/drive/My Drive/SA/Code/spoof_detection_deep_features/WaveletCNN/cwt-tensorflow')
 # from cwt import cwtMortlet, cwtRicker,mortletWavelet, rickerWavelet
@@ -84,15 +85,13 @@ def generator(data, labels, batch_size):
     Yields the next training batch.
     Suppose `samples` is an array [[audio1,label1], [audio2,label2],...].
     """
-    
-
-    total_batches = int(data.shape[0])
+    total_batches = int(data.shape[0]/batch_size)
     for i in range(total_batches):
         X_train,y_train = create_batches_rnd(data, labels, batch_size)
         yield X_train, y_train
 
 
-# In[6]:
+# In[5]:
 
 
 def generator_val(data, labels, batch_size):
@@ -100,48 +99,81 @@ def generator_val(data, labels, batch_size):
     Yields the next training batch.
     Suppose `samples` is an array [[audio1,label1], [audio2,label2],...].
     """
-    
-
-    total_batches = int(data.shape[0])
+    total_batches = int(data.shape[0]/batch_size)
     for i in range(total_batches):
-        X_train,y_train = create_batches_rnd(data, labels, batch_size)
+        X_train,y_train = create_batches_rnd_val(data, labels, batch_size)
         yield X_train, y_train
 
 
-# In[7]:
+# In[6]:
 
 
 def create_batches_rnd(data,labels,batch_size):
     wlen = 3200
     fact_amp = 0.2
     # Initialization of the minibatch (batch_size,[0=>x_t,1=>x_t+N,1=>random_samp])
+#     sig_batch=np.zeros([batch_size,wlen])
+#     lab_batch=np.array([batch_size,2])
+    sig_batch = []
+    lab_batch = []
+    signal_id_arr=np.random.randint(data.shape[0], size=batch_size)
+    rand_amp_arr = np.random.uniform(1.0-fact_amp,1+fact_amp,batch_size)
+    for i in range(int(batch_size/2)): 
+        signal = data[signal_id_arr[i]]    
+        # accesing to a random chunk
+        signal_len=signal.shape[0]
+        signal_beg=np.random.randint(signal_len-wlen-1) #randint(0, snt_len-2*wlen-1)
+        signal_end=signal_beg+wlen
+        sig_batch.append(signal[signal_beg:signal_end]*rand_amp_arr[i])
+        y=labels.iloc[signal_id_arr[i],-1]
+        lab_batch.append(y)
+        # adding equivalent spoofed or human speech to sig_batch
+        speaker_id = labels.iloc[signal_id_arr[i],0]
+        if labels.iloc[signal_id_arr[i],-1] == 0:
+            selected_labels = labels.loc[(labels.iloc[:,-1]==1) & (labels.iloc[:,0]==speaker_id)]
+        elif labels.iloc[signal_id_arr[i],-1] == 1:
+            selected_labels = labels.loc[(labels.iloc[:,-1]==0) & (labels.iloc[:,0]==speaker_id)]
+        label = selected_labels.sample()
+        index = labels.loc[(labels.iloc[:,1]==label.values[0][1])].index
+#         print(index)
+        signal = data[index][0]
+        signal_len=signal.shape[0]
+        signal_beg=np.random.randint(signal_len-wlen-1) #randint(0, snt_len-2*wlen-1)
+        signal_end=signal_beg+wlen
+        sig_batch.append(signal[signal_beg:signal_end]*rand_amp_arr[i])
+        y=labels.iloc[index,-1]
+        lab_batch.append(y)
+    sig_batch = np.array(sig_batch)
+    lab_batch = np.array(lab_batch)
+    idx = np.random.permutation(len(sig_batch))
+    x,y = sig_batch[idx], lab_batch[idx]
+    a, b = np.shape(x)
+    sig_batch = x.reshape((batch_size, b, 1))
+#     print(sig_batch.shape)
+    return sig_batch, to_categorical(np.array(y),num_classes=2)
+
+
+def create_batches_rnd_val(data,labels,batch_size):
+    wlen = 3200
+    fact_amp = 0.2
+    # Initialization of the minibatch (batch_size,[0=>x_t,1=>x_t+N,1=>random_samp])
     sig_batch=np.zeros([batch_size,wlen])
-#     wpt_batch = np.zeros([batch_size,wlen,1])
     lab_batch=[]
     signal_id_arr=np.random.randint(data.shape[0], size=batch_size)
     rand_amp_arr = np.random.uniform(1.0-fact_amp,1+fact_amp,batch_size)
     for i in range(batch_size): 
-        # select a random sentence from the list 
-        #[fs,signal]=scipy.io.wavfile.read(data_folder+wav_lst[snt_id_arr[i]])
-        #signal=signal.astype(float)/32768
-#         [signal, fs] = sf.read(data_folder+wav_lst[snt_id_arr[i]])
         signal = data[signal_id_arr[i]]
         # accesing to a random chunk
         signal_len=signal.shape[0]
         signal_beg=np.random.randint(signal_len-wlen-1) #randint(0, snt_len-2*wlen-1)
         signal_end=signal_beg+wlen
         sig_batch[i,:]=signal[signal_beg:signal_end]*rand_amp_arr[i]
-#         wpt = Wavelet_1d(signal[signal_beg:signal_end])
-#         wpt_batch[i,:] = wpt
-        y=labels[signal_id_arr[i]]
-#         yt = to_categorical(y, num_classes=out_dim)
+        y=labels.iloc[signal_id_arr[i],-1]
         lab_batch.append(y)
     a, b = np.shape(sig_batch)
     sig_batch = sig_batch.reshape((a, b, 1))
-    return sig_batch, np.array(lab_batch)
+    return sig_batch, to_categorical(np.array(lab_batch),num_classes = 2)
 
-
-# In[8]:
 
 
 def res_conv_block(X,in_channels,out_channels,stage,block,dilation=1):
@@ -178,7 +210,7 @@ input_shape = None,3200,1
     
 
 inputs = tf.placeholder(tf.float32, shape=input_shape, name= 'the_input')
-
+learning_rate = tf.placeholder(tf.float32, shape=[])
 
 sinc = sincnet.SincConv1D(64, 251, 16000)(inputs)
 sinc_pool = MaxPooling1D(pool_size=3,name = 'sinc_pool')(sinc)
@@ -230,6 +262,7 @@ def model_summary():
 
 model_summary()
 
+saver = tf.train.Saver()
 
 # In[11]:
 
@@ -250,54 +283,21 @@ with tf.name_scope('Loss'):
 # In[12]:
 
 
-X_train = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_train_train.npy")
-y_train = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_train_train_labels.npy")
+X_train = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_train.npy",allow_pickle=True)
+with open("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_train_df.pkl", 'rb') as pickle_file:
+    y_train = pickle.load(pickle_file)
+X_val = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev.npy", allow_pickle=True)
+with open("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_df.pkl", 'rb') as pickle_file:
+    y_val = pickle.load(pickle_file)
 
-
-y_train1 = list()
-for i in y_train:
-    if i == b'bonafide':
-        y_train1.append(1)
-    else:
-        y_train1.append(0)
-y_train = to_categorical(y_train)
-# X_dev_train = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_train.npy")
-# X_dev_val = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_val.npy")
-# y_dev_train = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_train_labels.npy")
-# y_dev_val = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_val_labels.npy")
-# dev_wpt_levels_data_train = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_wpt_levels_data_train.npy")
-# dev_wpt_levels_data_val = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_wpt_levels_data_val.npy")
-# wpt_levels_data_train = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_train_wpt_levels_data_train.npy")
-X_val = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_train.npy")
-y_val = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_train_labels.npy")
-# y_val = list(y_val)
-# y_val1 = list()
-# for i in y_val:
-#     if i == b'bonafide':
-#         y_val1.append(1)
-#     else:
-#         y_val1.append(0)
-y_val = to_categorical(y_val)
-# wpt_levels_data_val = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_train_wpt_levels_data_val.npy")
-
-
-# ## Normalize data
-
-# In[14]:
-
-
-row_sums = X_train.sum(axis=1)
-X_train = X_train / row_sums[:, np.newaxis]
-row_sums = X_val.sum(axis=1)
-X_val = X_val / row_sums[:, np.newaxis]
-
-
+X_train = np.array([s[0] for s in X_train])
+X_val = np.array([s[0] for s in X_val])    
 # In[17]:
 
 
 with tf.name_scope('RMSProp'):
     # Gradient Descent
-    optimizer = tf.train.RMSPropOptimizer(1e-3)
+    optimizer = tf.train.RMSPropOptimizer(learning_rate)
     train_step = optimizer.minimize(loss)
     # Op to calculate every variable gradient
 
@@ -314,42 +314,50 @@ merged_summary_op = tf.summary.merge_all()
 init_op = tf.global_variables_initializer()
 
 batch_size = 128
-logs_path = '/home/rohita/rohit/spoof/npy_data_asvspoof/Sincnet'
-
+logs_path = '/home/rohita/rohit/spoof/npy_data_asvspoof/Sincnet/equal_human_spoof'
+model_path = '/home/rohita/rohit/spoof/npy_data_asvspoof/Sincnet/equal_human_spoof/model.ckpt'
 # Run training loop
 with sess.as_default():
     
     sess.run(init_op)
     
-    train_summary_writer = tf.summary.FileWriter(logs_path+'/Train_whole_dataset_RMS',
+    train_summary_writer = tf.summary.FileWriter(logs_path+'/Train_new',
                                             graph=tf.get_default_graph())
-    val_summary_writer = tf.summary.FileWriter(logs_path+'/Val_whole_dataset_RMS')
-    gen = generator(X_train, y_train, batch_size)
-    gen_val = generator_val(X_val, y_val, batch_size)
+    val_summary_writer = tf.summary.FileWriter(logs_path+'/Val_new')
     total_batch_train = int(X_train.shape[0]/batch_size)
     total_batch_val = int(X_val.shape[0]/batch_size)
-    for epoch in range(100):
+    for epoch in range(10):
+        gen = generator(X_train, y_train, batch_size)
+        gen_val = generator_val(X_val, y_val, batch_size)
         for i in range(total_batch_train):
             X_batch, y_batch = next(gen)
-            feed_dict = {inputs: X_batch, labels: y_batch, tf.keras.backend.learning_phase(): 1}
+            if epoch == 0:
+                lr = 0.00001
+            elif epoch == 1:
+                lr = 0.0001
+            elif epoch == 2:
+                lr = 0.001
+            elif epoch == 3:
+                lr = 0.0001
+            else:
+                lr = 0.00001
+             
+            feed_dict = {learning_rate: lr, inputs: X_batch, labels: y_batch, tf.keras.backend.learning_phase(): 1}
             sess.run(train_step,feed_dict)
             loss_train, acc_train, summary = (sess.run([loss, acc, merged_summary_op],feed_dict))
             train_summary_writer.add_summary(summary, epoch * total_batch_train + i)
             print("Epoch: "+str(epoch)+"step: "+str(i)+"Training loss: ",loss_train," ","Training accuracy"," ",acc_train)
         
-#             loss_val,acc_val = (sess.run([loss,acc_value],feed_dict={inputs: X_batch, labels: y_batch, tf.keras.backend.learning_phase(): 0}))
-#             print("Epoch: "+str(i)+"step: "+str(step)+"loss: ",loss_val," ","accuracy"," ",acc_val)
-            
                     
         for i in range(total_batch_val):
             X_batch, y_batch = next(gen_val)
-            loss_val, acc_val, summary = (sess.run([loss, acc, merged_summary_op],feed_dict={inputs: X_batch, labels: y_batch, tf.keras.backend.learning_phase(): 0}))
+            loss_val, acc_val, summary = (sess.run([loss, acc, merged_summary_op],feed_dict={learning_rate: lr, inputs: X_batch, labels: y_batch, tf.keras.backend.learning_phase(): 0}))
             val_summary_writer.add_summary(summary, epoch * total_batch_val + i)
-            print("val loss: ",loss_val," ","val accuracy"," ",acc_val)
-
+            print("Epoch: "+str(epoch)+"step: "+str(i)+"val loss: ",loss_val," ","val accuracy"," ",acc_val)
 
 # In[ ]:
 
-
+    save_path = saver.save(sess, model_path)
+    print("Model saved in file: %s" % save_path)
 
 
