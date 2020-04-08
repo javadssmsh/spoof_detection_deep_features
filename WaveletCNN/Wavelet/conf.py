@@ -1,6 +1,4 @@
 from data_io import ReadList, read_conf, str_to_bool
-
-
 import numpy as np
 
 # Reading cfg file

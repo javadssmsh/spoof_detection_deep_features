@@ -1,18 +1,33 @@
-from tensorflow import set_random_seed
+"""
+            File to define Sincnet the model for training
+
+            Functions:
+            get_model(input_shape,out_dim): Defines the model
+
+"""
+
+
 from keras import models, layers
-import numpy as np
 import sincnet
-from keras.layers import Dense, Dropout, Activation
 from keras.layers import MaxPooling1D, Conv1D, LeakyReLU, BatchNormalization, Dense, Flatten
 from keras.layers import InputLayer, Input
 from keras.models import Model
-
 from conf import *
 
 
 
 def getModel(input_shape, out_dim):
-    #
+    """
+                Function defines the Sincnet model
+
+                Parameters:
+                input_shape : input dimension of the chunk of audio to train on
+                out_dim (int) : output_dimension for the labels used to make the labels categorical
+
+                Returns:
+                model : returns the model to train
+                """
+
     inputs = Input(input_shape)
     x = sincnet.SincConv1D(cnn_N_filt[0], cnn_len_filt[0], fs)(inputs)
 

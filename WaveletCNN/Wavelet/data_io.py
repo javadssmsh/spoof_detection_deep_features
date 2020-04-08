@@ -1,10 +1,21 @@
+"""
+            File that is responsible for initializing the variables in conf.py file from the config file.
+
+            Functions:
+            ReadList(list_file) : To convert the protocol file into a dataframe to feed it into other functions like batchGenerator
+            Read_conf(conf_file): To read the config file and initialize the conf.py file
+            Str_to_bool():
+
+
+"""
+
 import configparser as ConfigParser
 from optparse import OptionParser
 import numpy as np
 import pandas as pd
 
 
-# import scipy.io.wavfile
+
 
 
 def ReadList(list_file):
