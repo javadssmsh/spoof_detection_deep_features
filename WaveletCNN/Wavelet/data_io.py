@@ -14,7 +14,11 @@ from optparse import OptionParser
 import numpy as np
 import pandas as pd
 
-
+import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID";
+ 
+# The GPU id to use, usually either "0" or "1";
+os.environ["CUDA_VISIBLE_DEVICES"]="1";  
 
 
 
@@ -84,7 +88,7 @@ def read_conf(cfg_file=None):
     if cfg_file is None:
         cfg_file = options.cfg
     if options.cfg is None and cfg_file is None:
-        cfg_file = r'/media/rohit/New Volume/codes/SA/PycharmProjects/spoof_detection_deep_features/WaveletCNN/Wavelet/cfg/Wavelet_ASV.cfg'
+        cfg_file = r'/home/rohita/rohit/spoof/spoof_deep_features/spoof_detection_deep_features/WaveletCNN/Wavelet/cfg/Wavelet_ASV.cfg'
     Config = ConfigParser.ConfigParser()
     Config.read(cfg_file)
 

@@ -86,7 +86,7 @@ def generator(data, labels, batch_size):
     Suppose `samples` is an array [[audio1,label1], [audio2,label2],...].
     """
     total_batches = int(data.shape[0]/batch_size)
-    for i in range(total_batches):
+    for i in range(1000):
         X_train,y_train = create_batches_rnd(data, labels, batch_size)
         yield X_train, y_train
 
@@ -128,6 +128,7 @@ def create_batches_rnd(data,labels,batch_size):
         y=labels.iloc[signal_id_arr[i],-1]
         lab_batch.append(y)
         # adding equivalent spoofed or human speech to sig_batch
+#         print(labels.iloc[signal_id_arr[i],:])
         speaker_id = labels.iloc[signal_id_arr[i],0]
         if labels.iloc[signal_id_arr[i],-1] == 0:
             selected_labels = labels.loc[(labels.iloc[:,-1]==1) & (labels.iloc[:,0]==speaker_id)]
@@ -135,6 +136,7 @@ def create_batches_rnd(data,labels,batch_size):
             selected_labels = labels.loc[(labels.iloc[:,-1]==0) & (labels.iloc[:,0]==speaker_id)]
         label = selected_labels.sample()
         index = labels.loc[(labels.iloc[:,1]==label.values[0][1])].index
+#         print("label:",labels.iloc[index,:])
 #         print(index)
         signal = data[index][0]
         signal_len=signal.shape[0]
@@ -214,43 +216,54 @@ learning_rate = tf.placeholder(tf.float32, shape=[])
 
 sinc = sincnet.SincConv1D(64, 251, 16000)(inputs)
 sinc_pool = MaxPooling1D(pool_size=3,name = 'sinc_pool')(sinc)
-sinc_norm = BatchNormalization(momentum=0.05, name = 'sinc_norm')(sinc_pool)
-sinc_layer_norm = sincnet.LayerNorm(name = 'sinc_layer_norm')(sinc_norm)
+sinc_layer_norm = sincnet.LayerNorm(name = 'sinc_layer_norm')(sinc_pool)
 sinc_relu = LeakyReLU(alpha=0.2, name = 'sinc_relu')(sinc_layer_norm)
 
-sinc_conv = Conv1D(64, 5, strides=2, padding='valid',kernel_initializer = keras.initializers.glorot_uniform(seed=0))(sinc_relu)
-# sinc_pool_1 = MaxPooling1D(pool_size=3,name = 'sinc_pool_1')(sinc_conv)
-sinc_norm_1 = BatchNormalization(momentum=0.05, name = 'sinc_norm_1')(sinc_conv)
-sinc_layer_norm_1 = sincnet.LayerNorm(name = 'sinc_layer_norm_1')(sinc_norm_1)
+sinc_conv = Conv1D(64, 5, strides=2, padding='valid')(sinc_relu)
+sinc_pool_1 = MaxPooling1D(pool_size=3,name = 'sinc_pool_1')(sinc_conv)
+sinc_layer_norm_1 = sincnet.LayerNorm(name = 'sinc_layer_norm_1')(sinc_pool_1)
 sinc_relu_1 = LeakyReLU(alpha=0.2, name = 'sinc_relu_1')(sinc_layer_norm_1)
  
+
+sinc_conv_1 = Conv1D(64, 5, strides=2, padding='valid')(sinc_relu_1)
+sinc_pool_2 = MaxPooling1D(pool_size=3,name = 'sinc_pool_1')(sinc_conv_1)
+
+sinc_layer_norm_2= sincnet.LayerNorm(name = 'sinc_layer_norm_1')(sinc_pool_2)
+sinc_relu_2= LeakyReLU(alpha=0.2, name = 'sinc_relu_1')(sinc_layer_norm_2)
+flat = Flatten()(sinc_relu_2)
 #concate level one and level two decomposition
 # concate_level_2 = concatenate([relu_1_2,sinc_relu_1])
 # print(concate_level_2.shape)
-res_conv_1 = res_conv_block(sinc_relu_1, 128, 16, 1, 'a', 4)
-res_conv_2 = res_conv_block(res_conv_1, 16, 8, 2, 'a', 8)
-res_conv_3 = res_conv_block(res_conv_2, 8, 4, 3, 'a', 16)
-res_conv_4 = res_conv_block(res_conv_3, 4, 2, 4, 'a', 32)
-res_conv_5 = res_conv_block(res_conv_4, 2, 1, 5, 'a', 64)
+# res_conv_1 = res_conv_block(sinc_relu_1, 128, 16, 1, 'a', 4)
+# res_conv_2 = res_conv_block(res_conv_1, 16, 8, 2, 'a', 8)
+# res_conv_3 = res_conv_block(res_conv_2, 8, 4, 3, 'a', 16)
+# res_conv_4 = res_conv_block(res_conv_3, 4, 2, 4, 'a', 32)
+# res_conv_5 = res_conv_block(res_conv_4, 2, 1, 5, 'a', 64)
 
-res_norm = BatchNormalization(name='res_norm')(res_conv_5)
-res_relu = Activation('relu')(res_norm)
+# res_norm = BatchNormalization(name='res_norm')(res_conv_5)
+# res_relu = Activation('relu')(res_norm)
 
 
-pool_5_1 = AveragePooling1D(pool_size=3, padding='same', name='avg_pool_5_1')(res_relu)
-flat_5_1 = Flatten(name='flat_5_1')(pool_5_1) 
+# pool_5_1 = AveragePooling1D(pool_size=3, padding='same', name='avg_pool_5_1')(sinc_relu_2)
+# flat_5_1 = Flatten(name='flat_5_1')(pool_5_1) 
 
-fc_5 = Dense(2048, name='fc_5',kernel_initializer = keras.initializers.glorot_uniform(seed=0))(flat_5_1)
-norm_5 = BatchNormalization(name='norm_5')(fc_5)
-relu_5 = Activation('relu', name='relu_5')(norm_5)
+fc_5 = Dense(2048, name='fc_5')(flat)
+norm_5 = BatchNormalization(momentum=0.05, epsilon=1e-5)(fc_5)
+relu_5 =  LeakyReLU(alpha=0.2)(norm_5)
 drop_5 = Dropout(0.5, name='drop_5')(relu_5)
 
-fc_6 = Dense(2048, name='fc_6',kernel_initializer = keras.initializers.glorot_uniform(seed=0))(drop_5)
-norm_6 = BatchNormalization(name='norm_6')(fc_6)
-relu_6 = Activation('relu', name='relu_6')(norm_6)
+fc_6 = Dense(2048, name='fc_6')(drop_5)
+norm_6 = BatchNormalization(momentum=0.05, epsilon=1e-5)(fc_6)
+relu_6 =  LeakyReLU(alpha=0.2)(norm_6)
 drop_6 = Dropout(0.5, name='drop_6')(relu_6)
 
-output = Dense(2, activation=tf.nn.softmax)(drop_6)
+fc_7= Dense(2048, name='fc_6')(drop_6)
+norm_7= BatchNormalization(momentum=0.05, epsilon=1e-5)(fc_7)
+relu_7=  LeakyReLU(alpha=0.2)(norm_7)
+drop_7= Dropout(0.5, name='drop_6')(relu_7)                                                        
+
+                                                        
+output = Dense(2, activation=tf.nn.softmax)(drop_7)
 
 
 # In[10]:
@@ -286,6 +299,7 @@ with tf.name_scope('Loss'):
 X_train = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_train.npy",allow_pickle=True)
 with open("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_train_df.pkl", 'rb') as pickle_file:
     y_train = pickle.load(pickle_file)
+y_train = y_train.reset_index(drop=True)
 X_val = np.load("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev.npy", allow_pickle=True)
 with open("/home/rohita/rohit/spoof/npy_data_asvspoof/ASVspoof2019_dev_df.pkl", 'rb') as pickle_file:
     y_val = pickle.load(pickle_file)
@@ -313,7 +327,7 @@ merged_summary_op = tf.summary.merge_all()
 # Initialize all variables
 init_op = tf.global_variables_initializer()
 
-batch_size = 128
+batch_size = 256
 logs_path = '/home/rohita/rohit/spoof/npy_data_asvspoof/Sincnet/equal_human_spoof'
 model_path = '/home/rohita/rohit/spoof/npy_data_asvspoof/Sincnet/equal_human_spoof/model.ckpt'
 # Run training loop
@@ -326,10 +340,18 @@ with sess.as_default():
     val_summary_writer = tf.summary.FileWriter(logs_path+'/Val_new')
     total_batch_train = int(X_train.shape[0]/batch_size)
     total_batch_val = int(X_val.shape[0]/batch_size)
-    for epoch in range(10):
+    acc_train_lst = []
+    loss_train_lst = []
+    acc_val_lst = []
+    loss_val_lst = []
+    for epoch in range(5):
         gen = generator(X_train, y_train, batch_size)
         gen_val = generator_val(X_val, y_val, batch_size)
-        for i in range(total_batch_train):
+        average_acc_train = 0
+        average_loss_train = 0
+        average_acc_val = 0
+        average_loss_val = 0
+        for i in range(1000):
             X_batch, y_batch = next(gen)
             if epoch == 0:
                 lr = 0.00001
@@ -347,14 +369,43 @@ with sess.as_default():
             loss_train, acc_train, summary = (sess.run([loss, acc, merged_summary_op],feed_dict))
             train_summary_writer.add_summary(summary, epoch * total_batch_train + i)
             print("Epoch: "+str(epoch)+"step: "+str(i)+"Training loss: ",loss_train," ","Training accuracy"," ",acc_train)
-        
+            average_acc_train += acc_train / 1000
+            average_loss_train += loss_train / 1000
                     
         for i in range(total_batch_val):
             X_batch, y_batch = next(gen_val)
             loss_val, acc_val, summary = (sess.run([loss, acc, merged_summary_op],feed_dict={learning_rate: lr, inputs: X_batch, labels: y_batch, tf.keras.backend.learning_phase(): 0}))
             val_summary_writer.add_summary(summary, epoch * total_batch_val + i)
             print("Epoch: "+str(epoch)+"step: "+str(i)+"val loss: ",loss_val," ","val accuracy"," ",acc_val)
+            average_acc_val += acc_train / total_batch_val
+            average_loss_val += loss_train / total_batch_val
+            
+        acc_train_lst.append(average_acc_train)
+        acc_val_lst.append(average_acc_val)
+        loss_train_lst.append(average_loss_train)
+        loss_val_lst.append(average_loss_val)
+        
+    epochs = range(5)
+    plt.plot(epochs, acc_train_lst, 'g', label='Training acc')
+    plt.plot(epochs, acc_val_lst, 'b', label='validation acc')
+    plt.title('Training and Validation loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.savefig('/home/rohita/rohit/spoof/npy_data_asvspoof/Sincnet/equal_human_spoof/acc_plot.png')
+    plt.clf()
 
+    plt.plot(epochs, loss_train_lst, 'g', label='Training loss')
+    plt.plot(epochs, loss_val_lst, 'b', label='validation loss')
+    plt.title('Training and Validation loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig('/home/rohita/rohit/spoof/npy_data_asvspoof/Sincnet/equal_human_spoof/loss_plot.png')
+    
+    
+        
+            
 # In[ ]:
 
     save_path = saver.save(sess, model_path)
