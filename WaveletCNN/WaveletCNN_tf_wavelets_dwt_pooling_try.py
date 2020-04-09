@@ -179,10 +179,6 @@ def dwt(x,db2):
     
 
 
-def iwt(x,db2):
-    
-    idwt = tfwavelets.nodes.idwt1d(x,db2,1)
-    return idwt
 db2 = tfwavelets.dwtcoeffs.Wavelet(
     tfwavelets.dwtcoeffs.Filter(np.array([-0.12940952255092145,
                      0.22414386804185735,
@@ -229,33 +225,6 @@ class DWT_Pooling(Layer):
         return (input_shape[0], input_shape[1]//2, input_shape[2]*4)
 
 
-class IWT_UpSampling(Layer):
-    """
-    # Input shape :
-        
-            4D tensor of shape: (batch_size, signal, channels)
-        
-    # Output shape
-        
-            4D tensor of shape: (batch_size, singal*2, channels/4)
-        
-    """
-
-    def __init__(self, **kwargs):
-        super(IWT_UpSampling, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        super(IWT_UpSampling, self).build(input_shape) 
-
-    def call(self, x):
-        return iwt(x,db2)
-
-    def compute_output_shape(self, input_shape):
-        
-        return (input_shape[0], input_shape[1]*2, input_shape[2]//4)
-
-
-# In[10]:
 
 
 # def unetWavelet(input_size = (3200,1)):
