@@ -53,19 +53,19 @@ db2 = tfwavelets.dwtcoeffs.Wavelet(
 )
 
 
-def get_model(input_shape, out_dim):
+def getModel(input_shape, out_dim):
     inputs = Input(input_shape)
 
     conv_i = Conv1D(filters=128, kernel_size=5, strides=2, padding="same")(inputs)
-    norm_i = BatchNormalization(name='norm_1')(conv_i)
+    norm_i = BatchNormalization(name='norm_i')(conv_i)
     relu_i = LeakyReLU(alpha=0.2)(norm_i)
 
     res_conv_i_1 = res_conv_block(relu_i, 128, 64, 1, 'i', 1)
     res_conv_i_2 = res_conv_block(res_conv_i_1, 64, 64, 2, 'i', 1)
-    res_conv_i_3 = res_conv_block(res_conv_i_2, 64, 64, 2, 'i', 1)
-    res_conv_i_4 = res_conv_block(res_conv_i_3, 64, 64, 2, 'i', 1)
-    res_conv_i_5 = res_conv_block(res_conv_i_4, 64, 64, 2, 'i', 1)
-    res_conv_i_6 = res_conv_block(res_conv_i_5, 64, 64, 2, 'i', 1)
+    res_conv_i_3 = res_conv_block(res_conv_i_2, 64, 64, 3, 'i', 1)
+    res_conv_i_4 = res_conv_block(res_conv_i_3, 64, 64, 4, 'i', 1)
+    res_conv_i_5 = res_conv_block(res_conv_i_4, 64, 64, 5, 'i', 1)
+    res_conv_i_6 = res_conv_block(res_conv_i_5, 64, 64, 6, 'i', 1)
 
     paddings = tf.constant([[0, 0],  # the batch size dimension
                             [6, 6],  # top and bottom of image
@@ -149,13 +149,13 @@ def get_model(input_shape, out_dim):
 
     concat_res = concatenate([relu_5_1, res_conv_i_6])
 
-    res_conv_1 = res_conv_block(concat_res, 128, 64, 1, 'a', 4)
+    res_conv_1 = res_conv_block(relu_5_1, 128, 64, 1, 'a', 4)
     res_conv_2 = res_conv_block(res_conv_1, 64, 32, 2, 'a', 8)
     res_conv_3 = res_conv_block(res_conv_2, 32, 16, 3, 'a', 16)
     res_conv_4 = res_conv_block(res_conv_3, 16, 4, 4, 'a', 32)
     res_conv_5 = res_conv_block(res_conv_4, 4, 2, 5, 'a', 64)
 
-    res_norm = BatchNormalization(1, name='res_norm')(res_conv_5)
+    res_norm = BatchNormalization(name='res_norm')(res_conv_5)
     res_relu = LeakyReLU(alpha=0.2)(res_norm)
 
     pool_5_1 = AveragePooling1D(pool_size=7, strides=2, padding='same', name='avg_pool_5_1')(res_relu)
