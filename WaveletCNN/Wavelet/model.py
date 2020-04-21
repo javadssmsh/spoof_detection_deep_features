@@ -10,10 +10,13 @@
 from keras import models, layers
 import sincnet
 from keras.layers import MaxPooling1D, Conv1D, LeakyReLU, BatchNormalization, Dense, Flatten
-from keras.layers import InputLayer, Input
+from keras.layers import InputLayer, Input, Lambda
 from keras.models import Model
 from conf import *
+import tensorflow as tf
 
+def log_softmax(x):
+    return x - tf.log(tf.reduce_sum(tf.exp(x), -1, keep_dims=True))
 
 
 def getModel(input_shape, out_dim):
@@ -79,7 +82,8 @@ def getModel(input_shape, out_dim):
     x = LeakyReLU(alpha=0.2)(x)
 
     #DNN final
-    prediction = layers.Dense(out_dim, activation='softmax')(x)
+    prediction = layers.Dense(out_dim,activation='softmax')(x)
+#     prediction =  Lambda(lambda x: log_softmax(x))(x)
     model = Model(inputs=inputs, outputs=prediction)
     model.summary()
     return model
