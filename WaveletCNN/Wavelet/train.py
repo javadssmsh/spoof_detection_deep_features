@@ -11,7 +11,7 @@ from keras.utils import to_categorical
 from keras.optimizers import RMSprop
 from keras import backend as K
 K.clear_session()
-from modelWCNN import getModel
+from model import getModel
 import librosa as lb
 from data_io import batchGenerator, batchGenerator_val
 from keras.callbacks import LearningRateScheduler
@@ -59,10 +59,10 @@ if __name__ == "__main__":
 
     checkpoints_path = os.path.join(output_folder, 'checkpoints')
 
-    tb = TensorBoard(log_dir=os.path.join(output_folder, 'logs', 'WCNN'))
+    tb = TensorBoard(log_dir=os.path.join(output_folder, 'logs', 'Sincnet'))
     lrate = LearningRateScheduler(lr_scheduler, verbose=1)
     checkpointer = ModelCheckpoint(
-        filepath=os.path.join(checkpoints_path, 'WCNN.hdf5'),
+        filepath=os.path.join(checkpoints_path, 'Sincnet.hdf5'),
         verbose=1,
         save_best_only=False,
         save_weights_only=True)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     if pt_file != 'none':
         model.load_weights(pt_file)
 
-    train_generator = batchGenerator(batch_size, train_data_folder, flac_lst_train, snt_train, wlen, 0.2, out_dim)
-    validation_generator = batchGenerator_val(Batch_dev, dev_data_folder, flac_lst_dev, snt_dev, wlen, 0.2, out_dim)
+    train_generator = batchGenerator(batch_size, train_data_folder, flac_lst_train, snt_train, wlen, out_dim)
+    validation_generator = batchGenerator_val(Batch_dev, dev_data_folder, flac_lst_dev, snt_dev, wlen, out_dim)
     model.fit_generator(train_generator, steps_per_epoch=N_batches, epochs=N_epochs, verbose=1,
                         validation_data=validation_generator, validation_steps=N_dev_batches, callbacks=callbacks)

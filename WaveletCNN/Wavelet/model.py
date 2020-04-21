@@ -82,8 +82,8 @@ def getModel(input_shape, out_dim):
     x = LeakyReLU(alpha=0.2)(x)
 
     #DNN final
-    x = layers.Dense(out_dim)(x)
-    prediction =  Lambda(lambda x: log_softmax(x))(x)
+    prediction = layers.Dense(out_dim,activation='softmax')(x)
+#     prediction =  Lambda(lambda x: log_softmax(x))(x)
     model = Model(inputs=inputs, outputs=prediction)
     model.summary()
     return model

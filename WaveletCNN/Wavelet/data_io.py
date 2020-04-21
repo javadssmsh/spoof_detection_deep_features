@@ -1,12 +1,9 @@
 """
             File that is responsible for initializing the variables in conf.py file from the config file.
-
             Functions:
             ReadList(list_file) : To convert the protocol file into a dataframe to feed it into other functions like batchGenerator
             Read_conf(conf_file): To read the config file and initialize the conf.py file
             Str_to_bool():
-
-
 """
 
 import configparser as ConfigParser
@@ -166,10 +163,9 @@ def str_to_bool(s):
         raise ValueError
         
         
-def batchGenerator(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp, out_dim):
+def batchGenerator(batch_size, data_folder, flac_lst, N_snt, wlen, out_dim):
     """
         Batch generator for the train data
-
         Parameters:
         batch_size (int): size of batch
         data_folder : path where the flac audio files are present
@@ -178,23 +174,20 @@ def batchGenerator(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp, out
         wlen (int) : Length of the frame or chunk
         fact_amp (float) : amplitude for windowing
         out_dim (int) : output_dimension for the labels used to make the labels categorical
-
         Returns:
         sig_batch (np.array) : array containing random samples of given batch_size
         lab_batch (np.array) : array containing labels for the corresponding samples in sig_batch
-
         """
     while True:
-        sig_batch, lab_batch = create_batches_rnd(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp,
+        sig_batch, lab_batch = create_batches_rnd(batch_size, data_folder, flac_lst, N_snt, wlen,
                                                   out_dim)
         yield sig_batch, lab_batch
 
 
-def create_batches_rnd(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp, out_dim):
+def create_batches_rnd(batch_size, data_folder, flac_lst, N_snt, wlen, out_dim):
     """
             Create random chunks form randomly chosen samples from the whole dataset.
             Each batch is structured such that for each speaker there are equal number of spoofed and human samples.
-
             Parameters:
             batch_size (int): size of batch
             data_folder : path where the flac audio files are present
@@ -203,18 +196,14 @@ def create_batches_rnd(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp,
             wlen (int) : Length of the frame or chunk
             fact_amp (float) : amplitude for windowing
             out_dim (int) : output_dimension for the labels used to make the labels categorical
-
             Returns:
             sig_batch (np.array) : array containing random samples of given batch_size
             lab_batch (np.array) : array containing labels for the corresponding samples in sig_batch
-
             """
     # Initialization of the minibatch (batch_size,[0=>x_t,1=>x_t+N,1=>random_samp])
     sig_batch = []
     lab_batch = []
     snt_id_arr = np.random.randint(N_snt, size=batch_size)
-    rand_amp_arr = np.random.uniform(1.0 - fact_amp, 1 + fact_amp, batch_size)
-
     for i in range(int(batch_size / 2)):
         # select a random sentence from the list
         file_id = flac_lst.iloc[snt_id_arr[i], 1]
@@ -223,7 +212,7 @@ def create_batches_rnd(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp,
         snt_len = signal.shape[0]
         snt_beg = np.random.randint(snt_len - wlen - 1)  # randint(0, snt_len-2*wlen-1)
         snt_end = snt_beg + wlen
-        sig_batch.append(signal[snt_beg:snt_end] * rand_amp_arr[i])
+        sig_batch.append(signal[snt_beg:snt_end] )
         y = flac_lst.iloc[snt_id_arr[i], -1]
         lab_batch.append(y)
         speaker_id = flac_lst.iloc[snt_id_arr[i], 0]
@@ -238,7 +227,7 @@ def create_batches_rnd(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp,
         signal_len = signal.shape[0]
         signal_beg = np.random.randint(signal_len - wlen - 1)  # randint(0, snt_len-2*wlen-1)
         signal_end = signal_beg + wlen
-        sig_batch.append(signal[signal_beg:signal_end] * rand_amp_arr[i])
+        sig_batch.append(signal[signal_beg:signal_end])
         y = flac_lst.iloc[index, -1].values[0]
         lab_batch.append(y)
     sig_batch = np.array(sig_batch)
@@ -252,10 +241,9 @@ def create_batches_rnd(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp,
     return sig_batch, to_categorical(np.array(y), num_classes=out_dim)
 
 
-def batchGenerator_val(batch_size, data_folder, wav_lst, N_snt, wlen, fact_amp, out_dim):
+def batchGenerator_val(batch_size, data_folder, wav_lst, N_snt, wlen, out_dim):
     """
             Batch generator for the validation data
-
             Parameters:
             batch_size (int): size of batch
             data_folder : path where the flac audio files are present
@@ -264,22 +252,19 @@ def batchGenerator_val(batch_size, data_folder, wav_lst, N_snt, wlen, fact_amp, 
             wlen (int) : Length of the frame or chunk
             fact_amp (float) : amplitude for windowing
             out_dim (int) : output_dimension for the labels used to make the labels categorical
-
             Returns:
             sig_batch (np.array) : array containing random samples of given batch_size
             lab_batch (np.array) : array containing labels for the corresponding samples in sig_batch
-
             """
     while True:
-        sig_batch, lab_batch = create_batches_rnd_val(batch_size, data_folder, wav_lst, N_snt, wlen, fact_amp,
+        sig_batch, lab_batch = create_batches_rnd_val(batch_size, data_folder, wav_lst, N_snt, wlen,
                                                       out_dim)
         yield sig_batch, lab_batch
 
 
-def create_batches_rnd_val(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp, out_dim):
+def create_batches_rnd_val(batch_size, data_folder, flac_lst, N_snt, wlen, out_dim):
     """
                 Create random chunks form randomly chosen samples from the whole dataset.
-
                 Parameters:
                 batch_size (int): size of batch
                 data_folder : path where the flac audio files are present
@@ -288,17 +273,14 @@ def create_batches_rnd_val(batch_size, data_folder, flac_lst, N_snt, wlen, fact_
                 wlen (int) : Length of the frame or chunk
                 fact_amp (float) : amplitude for windowing
                 out_dim (int) : output_dimension for the labels used to make the labels categorical
-
                 Returns:
                 sig_batch (np.array) : array containing random samples of given batch_size
                 lab_batch (np.array) : array containing labels for the corresponding samples in sig_batch
-
                 """
     # Initialization of the minibatch (batch_size,[0=>x_t,1=>x_t+N,1=>random_samp])
     sig_batch = np.zeros([batch_size, wlen])
     lab_batch = []
     snt_id_arr = np.random.randint(N_snt, size=batch_size)
-    rand_amp_arr = np.random.uniform(1.0 - fact_amp, 1 + fact_amp, batch_size)
     for i in range(batch_size):
         file_id = flac_lst.iloc[snt_id_arr[i], 1]
         [signal,fs] = sf.read(str(data_folder + file_id + '.wav'))
@@ -306,7 +288,7 @@ def create_batches_rnd_val(batch_size, data_folder, flac_lst, N_snt, wlen, fact_
         snt_len = signal.shape[0]
         snt_beg = np.random.randint(snt_len - wlen - 1)  # randint(0, snt_len-2*wlen-1)
         snt_end = snt_beg + wlen
-        sig_batch[i, :] = signal[snt_beg:snt_end] * rand_amp_arr[i]
+        sig_batch[i, :] = signal[snt_beg:snt_end] 
         y = flac_lst.iloc[snt_id_arr[i], -1]
         yt = to_categorical(y, num_classes=out_dim)
         lab_batch.append(yt)
@@ -316,10 +298,9 @@ def create_batches_rnd_val(batch_size, data_folder, flac_lst, N_snt, wlen, fact_
     return sig_batch, np.array(lab_batch)
 
 
-def batchGenerator_scores(batch_size, data_folder, wav_lst, N_snt, wlen, fact_amp, out_dim):
+def batchGenerator_scores(batch_size, data_folder, wav_lst, N_snt, wlen, out_dim):
     """
             Batch generator for the validation data
-
             Parameters:
             batch_size (int): size of batch
             data_folder : path where the flac audio files are present
@@ -328,21 +309,18 @@ def batchGenerator_scores(batch_size, data_folder, wav_lst, N_snt, wlen, fact_am
             wlen (int) : Length of the frame or chunk
             fact_amp (float) : amplitude for windowing
             out_dim (int) : output_dimension for the labels used to make the labels categorical
-
             Returns:
             sig_batch (np.array) : array containing random samples of given batch_size
             lab_batch (np.array) : array containing labels for the corresponding samples in sig_batch
-
             """
     while True:
-        sig_batch, lab_batch = create_batches_scores(batch_size, data_folder, wav_lst, N_snt, wlen, fact_amp,
+        sig_batch, lab_batch = create_batches_scores(batch_size, data_folder, wav_lst, N_snt, wlen,
                                                       out_dim)
         yield sig_batch, lab_batch
 
-def create_batches_scores(batch_size, data_folder, flac_lst, N_snt, wlen, fact_amp, out_dim):
+def create_batches_scores(batch_size, data_folder, flac_lst, N_snt, wlen, out_dim):
     """
                 Create random chunks form randomly chosen samples from the whole dataset.
-
                 Parameters:
                 batch_size (int): size of batch
                 data_folder : path where the flac audio files are present
@@ -351,16 +329,13 @@ def create_batches_scores(batch_size, data_folder, flac_lst, N_snt, wlen, fact_a
                 wlen (int) : Length of the frame or chunk
                 fact_amp (float) : amplitude for windowing
                 out_dim (int) : output_dimension for the labels used to make the labels categorical
-
                 Returns:
                 sig_batch (np.array) : array containing random samples of given batch_size
                 lab_batch (np.array) : array containing labels for the corresponding samples in sig_batch
-
                 """
     # Initialization of the minibatch (batch_size,[0=>x_t,1=>x_t+N,1=>random_samp])
     sig_batch = np.zeros([batch_size, wlen])
     lab_batch = []
-    rand_amp_arr = np.random.uniform(1.0 - fact_amp, 1 + fact_amp, batch_size)
     for i in range(batch_size):
         file_id = flac_lst.iloc[i, 1]
         [signal,fs] = sf.read(str(data_folder + file_id + '.wav'))
@@ -368,7 +343,7 @@ def create_batches_scores(batch_size, data_folder, flac_lst, N_snt, wlen, fact_a
         snt_len = signal.shape[0]
         snt_beg = np.random.randint(snt_len - wlen - 1)  # randint(0, snt_len-2*wlen-1)
         snt_end = snt_beg + wlen
-        sig_batch[i, :] = signal[snt_beg:snt_end] * rand_amp_arr[i]
+        sig_batch[i, :] = signal[snt_beg:snt_end]
         y = flac_lst.iloc[i, -1]
         yt = to_categorical(y, num_classes=out_dim)
         lab_batch.append(yt)
@@ -514,4 +489,4 @@ def vad(data_folder, flac_lst):
                 audio = b"".join([audio,segment])
 # Save as FLAC file at correct sampling rate
         write_wave(str(data_folder + i + '.wav'), audio, fs) 
-       
+      

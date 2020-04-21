@@ -21,12 +21,12 @@ input_shape = wlen,1
 model = getModel(input_shape, out_dim)
 model.load_weights(pt_file)
 
-validation_generator = batchGenerator_scores(Batch_dev, dev_data_folder, flac_lst_dev, snt_dev, wlen, 0.2, out_dim)
+validation_generator = batchGenerator_scores(Batch_dev, dev_data_folder, flac_lst_dev, snt_dev, wlen,out_dim)
 y = model.predict_generator(validation_generator, steps = (snt_dev/Batch_dev), verbose = 1)
 print(len(y),len(flac_lst_dev))
-y1 = [i for i in y[:24844,0]] 
-y2 = [s for s in y[:24844,1]]
-flac_lst_dev['scores'] = [y2[i]-y1[i] for i in range(len(y1))]
+y1 = [math.log(i) for i in y[:24844,0]] 
+y2 = [math.log(s) for s in y[:24844,1]]
+flac_lst_dev['scores'] = [y1[i]-y2[i] for i in range(len(y1))]
 y_pred = [1 if i>0 else 0 for i in flac_lst_dev['scores']]
 # print(flac_lst_dev['label'][0:5], y_pred[:5])
 print(confusion_matrix(list(flac_lst_dev['label']), y_pred))
