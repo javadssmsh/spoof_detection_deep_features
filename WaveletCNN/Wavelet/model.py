@@ -14,9 +14,8 @@ from keras.layers import InputLayer, Input, Lambda
 from keras.models import Model
 from conf import *
 import tensorflow as tf
+import tensorflow.contrib.slim as slim
 
-def log_softmax(x):
-    return x - tf.log(tf.reduce_sum(tf.exp(x), -1, keep_dims=True))
 
 
 def getModel(input_shape, out_dim):
@@ -30,8 +29,8 @@ def getModel(input_shape, out_dim):
                 Returns:
                 model : returns the model to train
                 """
-
-    inputs = Input(input_shape)
+    input_shape = None,3200,1
+    inputs = tf.placeholder(tf.float32, shape=input_shape, name= 'the_input')
     x = sincnet.SincConv1D(cnn_N_filt[0], cnn_len_filt[0], fs)(inputs)
 
 
@@ -82,8 +81,9 @@ def getModel(input_shape, out_dim):
     x = LeakyReLU(alpha=0.2)(x)
 
     #DNN final
-    prediction = layers.Dense(out_dim,activation='softmax')(x)
-#     prediction =  Lambda(lambda x: log_softmax(x))(x)
-    model = Model(inputs=inputs, outputs=prediction)
-    model.summary()
-    return model
+    prediction = layers.Dense(out_dim)(x)
+    
+    model_vars = tf.trainable_variables()
+    slim.model_analyzer.analyze_vars(model_vars, print_info=True)
+    
+    return prediction
