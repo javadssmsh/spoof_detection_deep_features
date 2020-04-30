@@ -1,38 +1,23 @@
-"""
-            File to define Sincnet the model for training
-
-            Functions:
-            get_model(input_shape,out_dim): Defines the model
-
-"""
-
-
+# from tensorflow import set_random_seed
 from keras import models, layers
+import numpy as np
 import sincnet
+# from keras.layers import Dense, Dropout, Activation
 from keras.layers import MaxPooling1D, Conv1D, LeakyReLU, BatchNormalization, Dense, Flatten
 from keras.layers import InputLayer, Input, Lambda
 from keras.models import Model
-from conf import *
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
+from conf import *
 
+
+def log_softmax(x):
+    return x - tf.log(tf.reduce_sum(tf.exp(x), -1, keep_dims=True))
 
 
 def getModel(input_shape, out_dim):
-    """
-                Function defines the Sincnet model
-
-                Parameters:
-                input_shape : input dimension of the chunk of audio to train on
-                out_dim (int) : output_dimension for the labels used to make the labels categorical
-
-                Returns:
-                model : returns the model to train
-                """
-    input_shape = None,3200,1
-    inputs = tf.placeholder(tf.float32, shape=input_shape, name= 'the_input')
+    #
+    inputs = Input(input_shape)
     x = sincnet.SincConv1D(cnn_N_filt[0], cnn_len_filt[0], fs)(inputs)
-
 
     x = MaxPooling1D(pool_size=cnn_max_pool_len[0])(x)
     if cnn_use_batchnorm[0]:
@@ -58,7 +43,7 @@ def getModel(input_shape, out_dim):
     x = LeakyReLU(alpha=0.2)(x)
     x = Flatten()(x)
 
-    #DNN
+    # DNN
     x = Dense(fc_lay[0])(x)
     if fc_use_batchnorm[0]:
         x = BatchNormalization(momentum=0.05, epsilon=1e-5)(x)
@@ -80,10 +65,9 @@ def getModel(input_shape, out_dim):
         x = sincnet.LayerNorm()(x)
     x = LeakyReLU(alpha=0.2)(x)
 
-    #DNN final
-    prediction = layers.Dense(out_dim)(x)
-    
-    model_vars = tf.trainable_variables()
-    slim.model_analyzer.analyze_vars(model_vars, print_info=True)
-    
-    return prediction
+    # DNN final
+    x = layers.Dense(out_dim)(x)
+    # prediction = Lambda(lambda x: log_softmax(x))(x)
+    model = Model(inputs=inputs, outputs=x)
+    model.summary()
+    return model
