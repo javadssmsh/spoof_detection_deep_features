@@ -95,7 +95,7 @@ def read_conf(cfg_file=None):
     if cfg_file is None:
         cfg_file = options.cfg
     if options.cfg is None and cfg_file is None:
-        cfg_file = r'/media/rohit/New Volume/codes/SA/PycharmProjects/spoof_detection_deep_features/WaveletCNN/Wavelet/cfg/Wavelet_ASV.cfg'
+        cfg_file = r'/home/rohita/rohit/spoof/spoof_deep_features/spoof_detection_deep_features/WaveletCNN/Wavelet/cfg/Wavelet_ASV.cfg'
     Config = ConfigParser.ConfigParser()
     Config.read(cfg_file)
 

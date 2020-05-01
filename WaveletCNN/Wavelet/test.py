@@ -17,7 +17,11 @@ class Validation():
         self.class_lay = class_lay
         self.model = model
         self.debug = debug
-
+    
+    def log_softmax(x):
+        e_x = np.exp(x - np.max(x))
+        return np.log(e_x / e_x.sum())
+    
     def validate(self, epoch=None):
         dev_data_folder = self.dev_data_folder
         flac_lst_dev = self.flac_lst_dev
@@ -84,7 +88,8 @@ class Validation():
 
                 # Prediction for each chunkc  and calculation of average error
                 pred = np.argmax(pout, axis=1)
-                score = np.sum((pout[:, 0] - pout[:, 1]), axis=0) / len(pout)
+                pout1 = log_softmax(pout)
+                score = np.sum((pout1[:, 0] - pout1[:, 1]), axis=0) / len(pout)
                 err = np.mean(pred != lab)
 
                 # Calculate accuracy on the whole sentence
