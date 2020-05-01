@@ -16,7 +16,7 @@ from keras import backend as K
 import keras
 
 K.clear_session()
-from model import getModel
+from model import getModel_wavelets
 import librosa as lb
 from data_io import batchGenerator, batchGenerator_val
 from keras.callbacks import LearningRateScheduler
@@ -25,20 +25,17 @@ from test import Validation
 
 
 def lr_scheduler(epoch, lr):
-    if epoch == 1:
+    if epoch in [0,4,9]:
         decay_rate = 1
         return lr * decay_rate
-    elif epoch == 2:
+    elif epoch in [1,6]:
         decay_rate = 10
         return lr * decay_rate
-    elif epoch == 3:
+    elif epoch in [2,7]:
         decay_rate = 10
         return lr * decay_rate
-    elif epoch == 4:
+    elif epoch in [3,8,5]:
         decay_rate = 0.1
-        return lr * decay_rate
-    elif epoch == 5:
-        decay_rate = 1
         return lr * decay_rate
     else:
         decay_rate = 1
@@ -76,17 +73,17 @@ if __name__ == "__main__":
     input_shape = (wlen, 1)
     out_dim = class_lay[0]
 
-    model = getModel(input_shape, out_dim)
+    model = getModel_wavelets(input_shape, out_dim)
 
     optimizer = RMSprop(lr=0.00001, rho=0.9, epsilon=1e-8)
     model.compile(loss=softmax_cross_entropy_logits, optimizer=optimizer, metrics=['accuracy'])
 
     checkpoints_path = os.path.join(output_folder, 'checkpoints')
 
-    tb = TensorBoard(log_dir=os.path.join(output_folder, 'logs', 'Sincnet'))
+    tb = TensorBoard(log_dir=os.path.join(output_folder, 'logs', 'Wavelet'))
     lrate = LearningRateScheduler(lr_scheduler, verbose=1)
     checkpointer = ModelCheckpoint(
-        filepath=os.path.join(checkpoints_path, 'Sincnet.hdf5'),
+        filepath=os.path.join(checkpoints_path, 'Wavelet.hdf5'),
         verbose=1,
         save_best_only=False,
         save_weights_only=True)
@@ -94,7 +91,7 @@ if __name__ == "__main__":
     if not os.path.exists(checkpoints_path):
         os.makedirs(checkpoints_path)
     validation = ValidationCallback(Batch_dev, dev_data_folder, flac_lst_dev, wlen, wshift, class_lay)
-    callbacks = [tb, checkpointer, validation, lrate]
+    callbacks = [tb, checkpointer, lrate]
 
     if pt_file != 'none':
         model.load_weights(pt_file)

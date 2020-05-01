@@ -17,11 +17,11 @@ class Validation():
         self.class_lay = class_lay
         self.model = model
         self.debug = debug
-    
+
     def log_softmax(x):
         e_x = np.exp(x - np.max(x))
         return np.log(e_x / e_x.sum())
-    
+
     def validate(self, epoch=None):
         dev_data_folder = self.dev_data_folder
         flac_lst_dev = self.flac_lst_dev
@@ -74,6 +74,7 @@ class Validation():
                         a, b = np.shape(sig_arr)
                         inp = sig_arr.reshape(a, b, 1)
                         inp = np.array(inp)
+
                         pout[count_fr_tot - Batch_dev:count_fr_tot, :] = self.model.predict(inp, verbose=0)
                         count_fr = 0
                         sig_arr = np.zeros([Batch_dev, wlen])
@@ -84,12 +85,13 @@ class Validation():
                     a, b = np.shape(inp)
                     inp = inp.reshape(a, b, 1)
                     inp = np.array(inp)
+
                     pout[count_fr_tot - count_fr:count_fr_tot, :] = self.model.predict(inp, verbose=0)
 
                 # Prediction for each chunkc  and calculation of average error
                 pred = np.argmax(pout, axis=1)
-                pout1 = log_softmax(pout)
-                score = np.sum((pout1[:, 0] - pout1[:, 1]), axis=0) / len(pout)
+
+                score = np.sum((pout[:, 0] - pout[:, 1]), axis=0) / len(pout)
                 err = np.mean(pred != lab)
 
                 # Calculate accuracy on the whole sentence
@@ -134,9 +136,12 @@ def main():
         weight_file = pt_file
         input_shape = (wlen, 1)
         out_dim = class_lay[0]
-        model = getModel(input_shape, out_dim)
+        model = getModel_wavelets(input_shape, out_dim)
         model.load_weights(weight_file)
-        val = Validation(Batch_dev, dev_data_folder, flac_lst_dev, wlen, wshift, class_lay, model, True)
+        x = Lambda(lambda x: log_softmax(x))(model.output)
+        final_model = Model(input=model.input, output=x)
+
+        val = Validation(Batch_dev, dev_data_folder, flac_lst_dev, wlen, wshift, class_lay, final_model, True)
         val.validate()
     else:
         print("No PT FILE")
