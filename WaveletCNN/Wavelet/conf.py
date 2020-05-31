@@ -78,3 +78,9 @@ Batch_dev = 128
 sig_batch = np.zeros([batch_size, wlen])
 lab_batch = np.zeros(batch_size)
 out_dim = class_lay[0]
+
+
+
+scales = 8
+wavelets_per_octave = 12
+log_eps = 1e-6
