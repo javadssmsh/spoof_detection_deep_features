@@ -1,5 +1,5 @@
-# spoof_detection_deep_features
-## Keras implementation of the paper "Spoofing Detection on the ASVspoof2015 Challenge Corpus Employing Deep Neural Networks" 
+# Speech Spoof Detection:
+## Keras implementation of the paper [Spoofing Detection on the ASVspoof2015 Challenge Corpus Employing Deep Neural Networks](https://drive.google.com/open?id=1ucGszgBPNDsFCeKBSRhFn7DXbmEXvVNs) 
 ### Requirements:
 - keras 
 - librosa
@@ -10,6 +10,9 @@
 - pandas
   
 ### Description:
+
+![MFCC feaautes extraction process](/images/MFCC-CNPCC.png)
+
 In order to discriminate between the human and spoofed speech signals:
 - We train a DNN on the spoofing challenge training data for each input feature. The input feature to the DNN are delta + double delta Mel-frequency cepstral coefficients (DMCC) 
 
@@ -24,4 +27,4 @@ In order to discriminate between the human and spoofed speech signals:
 - We extract the deep features from the 5th layer of the DNN.
 - And then finally fit the GMM on those features.
 
-The results im getting are not at all comparable to the results stated in the paper as i have missed a few crucial step that were mentioned in the paper but were out of my understanding,
+
